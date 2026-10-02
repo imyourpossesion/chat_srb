@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Chat</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#e9e6f2;--ink:#23203a;--card:#fff;--line:#d3cee6;--sol:#f2a900;--rocio:#d63f8c;--bruno:#2f6fe0}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{font-family:Fredoka,system-ui,sans-serif;background:var(--bg);color:var(--ink);padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+button{font:inherit;cursor:pointer;border:0}
+:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.hide{display:none!important}
+
+/* login */
+#login{min-height:100%;display:grid;place-content:center;gap:22px;padding:24px;text-align:center}
+#login h1{font-size:2rem;font-weight:600}
+.users{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+.user{width:96px;height:96px;border-radius:50%;color:#fff;font-size:1.1rem;font-weight:600;transition:transform .15s}
+.user:hover{transform:scale(1.07)}
+.user[data-u=Sol]{background:var(--sol);color:var(--ink)}
+.user[data-u=Rocio]{background:var(--rocio)}
+.user[data-u=Bruno]{background:var(--bruno)}
+#passForm{display:grid;gap:10px;justify-items:center}
+#passForm input{width:220px;padding:12px 16px;border-radius:14px;border:2px solid var(--line);font:inherit;text-align:center;letter-spacing:.2em}
+#passForm .go{padding:12px 28px;border-radius:14px;background:var(--ink);color:#fff}
+#passForm .back{background:none;text-decoration:underline;color:var(--ink)}
+#err{color:#c22;min-height:1.3em}
+
+/* chat */
+#chat{height:100%;display:flex;flex-direction:column;max-width:720px;margin:0 auto;background:var(--card)}
+header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:2px solid var(--line)}
+header b{font-size:1.1rem}
+.dot{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:8px;vertical-align:-1px}
+header button{background:none;text-decoration:underline;color:var(--ink)}
+#msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+.m{max-width:78%;align-self:flex-start}
+.m.me{align-self:flex-end}
+.m .who{font-size:.8rem;font-weight:600;margin:0 6px 2px}
+.m.me .who{text-align:right}
+.bub{padding:9px 14px;border-radius:18px 18px 18px 4px;color:#fff;overflow-wrap:anywhere;white-space:pre-wrap}
+.m.me .bub{border-radius:18px 18px 4px 18px}
+.bub.sol{color:var(--ink)}
+.m img{width:130px;height:130px;object-fit:contain;display:block}
+.m time{font-size:.7rem;opacity:.6;margin:2px 6px;display:block}
+.m.me time{text-align:right}
+#empty{margin:auto;opacity:.6;text-align:center}
+#stickers{border-top:2px solid var(--line);padding:10px;max-height:190px;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,76px);gap:8px;justify-content:center}
+#stickers button{width:76px;height:76px;background:var(--bg);border-radius:14px;padding:4px}
+#stickers img{width:100%;height:100%;object-fit:contain}
+#stickers p{grid-column:1/-1;text-align:center;opacity:.65;font-size:.9rem}
+#bar{display:flex;gap:8px;padding:10px;border-top:2px solid var(--line)}
+#bar input{flex:1;min-width:0;padding:12px 16px;border-radius:22px;border:2px solid var(--line);font:inherit}
+#bar button{padding:0 18px;border-radius:22px;background:var(--ink);color:#fff}
+#bar #stk{background:var(--bg);color:var(--ink)}
+#cfg{background:#fff3cd;padding:10px 16px;font-size:.9rem}
+@media (prefers-reduced-motion:reduce){.user{transition:none}}
+</style>
+</head>
+<body>
+
+<section id="login">
+  <h1>¿Quién sos?</h1>
+  <div class="users">
+    <button class="user" data-u="Sol">Sol</button>
+    <button class="user" data-u="Bruno">Bruno</button>
+    <button class="user" data-u="Rocio">Rocio</button>
+  </div>
+  <form id="passForm" class="hide">
+    <label for="pass" id="passLabel"></label>
+    <input id="pass" type="password" inputmode="numeric" autocomplete="off">
+    <button class="go" type="submit">Entrar</button>
+    <button class="back" type="button" id="back">Elegir otro usuario</button>
+    <p id="err" role="alert"></p>
+  </form>
+</section>
+
+<section id="chat" class="hide">
+  <header><b><span class="dot" id="meDot"></span><span id="meName"></span></b><button id="out">Salir</button></header>
+  <div id="cfg" class="hide">Falta pegar la configuración de Firebase en el código (firebaseConfig).</div>
+  <div id="msgs"><p id="empty">Todavía no hay mensajes. Escribí el primero.</p></div>
+  <div id="stickers" class="hide"></div>
+  <form id="bar">
+    <button type="button" id="stk" aria-label="Stickers">Stickers</button>
+    <input id="txt" placeholder="Escribí un mensaje" autocomplete="off" maxlength="1000">
+    <button type="submit">Enviar</button>
+  </form>
+</section>
+
+<script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {getFirestore,collection,addDoc,query,orderBy,limitToLast,onSnapshot,serverTimestamp}
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+/* 1) Pegá acá la configuración de tu proyecto de Firebase */
+const firebaseConfig = {
+  apiKey: "AIzaSyAfC_8uR9wd0etHbm6xq3qQQF9JjUCk0ak",
+  authDomain: "chat-sol-bruno-rocio.firebaseapp.com",
+  projectId: "chat-sol-bruno-rocio",
+  appId: "1:797110937394:web:e71b6500d45085240f992b"
+};
+
+/* 2) Usuarios y contraseñas */
+const USERS = {
+  Sol:   {pass:"22092008", color:"#f2a900", cls:"sol"},
+  Rocio: {pass:"25112010", color:"#d63f8c", cls:"rocio"},
+  Bruno: {pass:"29112008", color:"#2f6fe0", cls:"bruno"}
+};
+
+/* 3) Stickers: cuando los dibujes, guardalos en la carpeta "stickers" y agregá acá sus nombres */
+const STICKERS = [
+  // "stickers/gato.png",
+  // "stickers/corazon.png"
+];
+
+const $ = id => document.getElementById(id);
+let me = null, picked = null, db = null, started = false;
+
+/* ---------- login ---------- */
+document.querySelectorAll(".user").forEach(b => b.onclick = () => {
+  picked = b.dataset.u;
+  $("passLabel").textContent = "Contraseña de " + picked;
+  $("passForm").classList.remove("hide");
+  $("pass").value = ""; $("err").textContent = ""; $("pass").focus();
+});
+$("back").onclick = () => { picked = null; $("passForm").classList.add("hide"); };
+$("passForm").onsubmit = e => {
+  e.preventDefault();
+  if ($("pass").value === USERS[picked].pass) {
+    localStorage.setItem("chatUser", picked);
+    enter(picked);
+  } else {
+    $("err").textContent = "Contraseña incorrecta";
+  }
+};
+$("out").onclick = () => { localStorage.removeItem("chatUser"); location.reload(); };
+
+const saved = localStorage.getItem("chatUser");
+if (saved && USERS[saved]) enter(saved);
+
+/* ---------- chat ---------- */
+function enter(name) {
+  me = name;
+  $("login").classList.add("hide");
+  $("chat").classList.remove("hide");
+  $("meName").textContent = name;
+  $("meDot").style.background = USERS[name].color;
+  buildStickers();
+  if (started) return;
+  started = true;
+  if (!firebaseConfig.projectId) { $("cfg").classList.remove("hide"); return; }
+  db = getFirestore(initializeApp(firebaseConfig));
+  const q = query(collection(db, "messages"), orderBy("ts"), limitToLast(200));
+  onSnapshot(q, snap => render(snap.docs.map(d => d.data())));
+}
+
+function render(list) {
+  const box = $("msgs");
+  const bottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
+  box.replaceChildren();
+  if (!list.length) { const p = document.createElement("p"); p.id = "empty"; p.textContent = "Todavía no hay mensajes. Escribí el primero."; box.append(p); return; }
+  for (const m of list) {
+    const u = USERS[m.user]; if (!u) continue;
+    const d = document.createElement("div"); d.className = "m" + (m.user === me ? " me" : "");
+    const who = document.createElement("div"); who.className = "who"; who.textContent = m.user; who.style.color = u.color;
+    d.append(who);
+    if (m.sticker) {
+      if (!STICKERS.includes(m.sticker)) continue;
+      const i = document.createElement("img"); i.src = m.sticker; i.alt = "sticker"; d.append(i);
+    } else {
+      const b = document.createElement("div"); b.className = "bub " + u.cls; b.style.background = u.color; b.textContent = m.text; d.append(b);
+    }
+    if (m.ts) { const t = document.createElement("time"); t.textContent = m.ts.toDate().toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"}); d.append(t); }
+    box.append(d);
+  }
+  if (bottom || list.at(-1).user === me) box.scrollTop = box.scrollHeight;
+}
+
+function send(data) {
+  if (!db) return;
+  addDoc(collection(db, "messages"), {user: me, ts: serverTimestamp(), ...data});
+}
+$("bar").onsubmit = e => {
+  e.preventDefault();
+  const t = $("txt").value.trim(); if (!t) return;
+  send({text: t}); $("txt").value = "";
+};
+
+/* ---------- stickers ---------- */
+function buildStickers() {
+  const s = $("stickers"); s.replaceChildren();
+  if (!STICKERS.length) {
+    const p = document.createElement("p"); p.textContent = "Todavía no hay stickers. Agregá tus dibujos en la lista STICKERS del código."; s.append(p);
+  }
+  for (const src of STICKERS) {
+    const b = document.createElement("button"); b.type = "button";
+    const i = document.createElement("img"); i.src = src; i.alt = "sticker"; b.append(i);
+    b.onclick = () => { send({sticker: src}); s.classList.add("hide"); };
+    s.append(b);
+  }
+}
+$("stk").onclick = () => $("stickers").classList.toggle("hide");
+</script>
+</body>
+</html>
