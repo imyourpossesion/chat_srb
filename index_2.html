@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Chat</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#5a3d37;          /* chocolate oscuro para texto */
+  --choco:#c9a18c;        /* chocolate pastel */
+  --straw:#ffc2d6;        /* frutilla */
+  --straw-d:#ff8fb3;
+  --vani:#fff6dc;         /* crema */
+  --card:#fffaf0;
+  --line:#ecd5c6;
+  --tilt:125deg;          /* inclinación de las rayas del fondo */
+}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{font-family:Fredoka,system-ui,sans-serif;color:var(--ink);padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);overflow:hidden}
+/* fondo de rayas finitas: crema / frutilla / crema / chocolate */
+body::before{content:"";position:fixed;inset:0;z-index:-1;
+  background:repeating-linear-gradient(var(--tilt),
+    var(--vani) 0 4px, var(--straw) 4px 8px, var(--vani) 8px 12px, var(--choco) 12px 16px)}
+button{font:inherit;cursor:pointer;border:0;color:inherit}
+:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.hide{display:none!important}
+#app{height:100%}
+
+/* sacudida del 67 */
+@keyframes bob67{
+  0%,100%{transform:translateY(0) rotate(0)}
+  25%{transform:translateY(-18px) rotate(-.7deg)}
+  75%{transform:translateY(18px) rotate(.7deg)}
+}
+.shake67{animation:bob67 .42s ease-in-out 7}
+
+/* lluvia de corazones */
+#rain{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:60}
+#rain span{position:absolute;top:-8vh;animation:fall linear forwards;will-change:transform}
+@keyframes fall{
+  from{transform:translate(0,-8vh) rotate(0)}
+  50%{transform:translate(var(--sway),55vh) rotate(calc(var(--r) / 2))}
+  to{transform:translate(0,112vh) rotate(var(--r))}
+}
+
+/* login */
+#login{min-height:100%;display:grid;place-content:center;gap:24px;padding:24px;text-align:center}
+#login .card{background:var(--card);border:3px solid var(--choco);border-radius:32px;padding:30px 26px;display:grid;gap:22px;justify-items:center;box-shadow:0 10px 0 rgba(201,161,140,.35)}
+#login h1{font-size:2rem;font-weight:600}
+.users{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+.user{width:92px;height:92px;border-radius:50%;font-size:1.1rem;font-weight:600;border:3px solid;transition:transform .15s;box-shadow:0 5px 0 rgba(90,61,55,.15)}
+.user:hover{transform:scale(1.07) rotate(-3deg)}
+#passForm{display:grid;gap:10px;justify-items:center}
+#passForm input{width:220px;padding:12px 16px;border-radius:16px;border:2px solid var(--choco);background:#fff;font:inherit;text-align:center;letter-spacing:.2em;color:var(--ink)}
+#passForm .go{padding:12px 28px;border-radius:16px;background:var(--straw);border:2px solid var(--straw-d);font-weight:600}
+#passForm .back{background:none;text-decoration:underline}
+#err{color:#c2415f;min-height:1.3em}
+
+/* chat */
+#chat{height:100%;display:flex;flex-direction:column;max-width:720px;margin:0 auto;background:var(--card);position:relative}
+@media (min-width:760px){
+  #chat{height:calc(100% - 32px);margin:16px auto;border-radius:30px;border:3px solid var(--choco);overflow:hidden;box-shadow:0 10px 0 rgba(201,161,140,.35)}
+}
+header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px 6px}
+header b{font-size:1.1rem;display:flex;align-items:center}
+.hbtns{display:flex;gap:6px}
+.hbtns button{background:var(--vani);border:2px solid var(--line);border-radius:14px;padding:4px 12px;font-size:.9rem}
+.dot{display:inline-block;width:14px;height:14px;border-radius:50%;margin-right:8px;border:2px solid}
+#who{display:flex;gap:8px;padding:0 14px 8px;border-bottom:3px dotted var(--line);flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:.82rem;padding:2px 10px 2px 6px;border-radius:99px;background:var(--vani);border:2px solid var(--line)}
+.chip .dot{width:10px;height:10px;margin:0}
+.chip.off{opacity:.55}
+.chip.off .dot{background:transparent!important}
+#msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+.m{max-width:80%;align-self:flex-start}
+.m.me{align-self:flex-end}
+.m .who{font-size:.8rem;font-weight:600;margin:0 8px 2px}
+.m.me .who{text-align:right}
+.bub{padding:9px 14px;border:2px solid;border-radius:20px 20px 20px 5px;overflow-wrap:anywhere;white-space:pre-wrap;cursor:pointer;box-shadow:0 3px 0 rgba(90,61,55,.10)}
+.m.me .bub{border-radius:20px 20px 5px 20px}
+.m .pic{max-width:100%;width:230px;border-radius:18px;border:3px solid;display:block;cursor:zoom-in}
+.stk{display:block;cursor:pointer}
+.stk img{width:130px;height:130px;object-fit:contain;display:block}
+.ph{width:120px;height:120px;border-radius:26px;border:3px dashed var(--choco);background:var(--vani);display:grid;place-content:center;text-align:center;line-height:1}
+.ph b{font-size:2.6rem}
+.ph small{font-size:.65rem;opacity:.6;margin-top:4px}
+.meta{display:flex;align-items:center;gap:6px;margin:2px 8px}
+.m.me .meta{justify-content:flex-end}
+.meta time{font-size:.7rem;opacity:.6}
+.meta .more{background:none;font-size:.9rem;opacity:.45;padding:0 4px;line-height:1}
+.acts{display:none;gap:4px;margin:4px 4px 0;padding:5px 8px;background:#fff;border:2px solid var(--line);border-radius:99px;width:max-content;max-width:100%;flex-wrap:wrap}
+.m.me .acts{margin-left:auto}
+.m.sel .acts{display:flex}
+.acts button{background:none;font-size:1.25rem;padding:2px 5px;border-radius:50%}
+.acts .del{font-size:.8rem;padding:2px 8px;border-radius:99px;background:var(--straw)}
+.rx{display:flex;gap:4px;flex-wrap:wrap;margin:4px 4px 0}
+.m.me .rx{justify-content:flex-end}
+.rx button{background:#fff;border:2px solid var(--line);border-radius:99px;padding:0 8px;font-size:.85rem}
+.rx button.mine{background:var(--straw);border-color:var(--straw-d)}
+.gone{align-self:center;font-size:.85rem;background:var(--vani);border:2px dashed var(--choco);border-radius:16px;padding:5px 14px;opacity:.8}
+#empty{margin:auto;opacity:.6;text-align:center}
+
+#typing{display:flex;align-items:center;gap:8px;padding:2px 18px 6px;font-size:.85rem;min-height:24px}
+.td{display:inline-flex;gap:3px}
+.td i{width:7px;height:7px;border-radius:50%;background:var(--straw-d);animation:hop 1s infinite}
+.td i:nth-child(2){animation-delay:.15s}.td i:nth-child(3){animation-delay:.3s}
+@keyframes hop{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}
+
+#stickers{border-top:3px dotted var(--line);padding:10px;max-height:190px;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,84px);gap:8px;justify-content:center}
+#stickers button{width:84px;height:84px;background:var(--vani);border-radius:18px;padding:4px;border:2px solid var(--line)}
+#stickers img{width:100%;height:100%;object-fit:contain}
+#stickers .ph{width:100%;height:100%;border-radius:14px;border-width:2px}
+#stickers .ph b{font-size:1.6rem}
+#stickers .ph small{display:none}
+#bar{display:flex;gap:6px;padding:10px;border-top:3px dotted var(--line);align-items:center}
+#bar input[type=text]{flex:1;min-width:0;padding:12px 16px;border-radius:22px;border:2px solid var(--choco);background:#fff;font:inherit;color:var(--ink)}
+#bar button{height:44px;padding:0 14px;border-radius:22px;background:var(--vani);border:2px solid var(--line)}
+#bar .send{background:var(--straw);border-color:var(--straw-d);font-weight:600}
+#cfg{background:#fff3cd;padding:10px 16px;font-size:.9rem}
+
+/* galería y lightbox */
+#gal{position:absolute;inset:0;background:var(--card);z-index:20;display:flex;flex-direction:column}
+#gal header{border-bottom:3px dotted var(--line);padding-bottom:10px}
+#galGrid{flex:1;overflow-y:auto;padding:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;align-content:start}
+#galGrid img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:16px;border:3px solid var(--line);cursor:zoom-in}
+#galEmpty{padding:30px;text-align:center;opacity:.6}
+#lb{position:fixed;inset:0;background:rgba(90,61,55,.85);z-index:70;display:grid;place-content:center;padding:16px;cursor:zoom-out}
+#lb img{max-width:100%;max-height:90vh;border-radius:20px;border:4px solid var(--vani)}
+
+@media (prefers-reduced-motion:reduce){
+  .user{transition:none}
+  .td i{animation:none}
+  @keyframes bob67{0%,100%{transform:none}50%{transform:translateY(3px)}}
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+<section id="login">
+  <div class="card">
+    <h1>🍦 ¿Quién sos?</h1>
+    <div class="users">
+      <button class="user" data-u="Sol">Sol</button>
+      <button class="user" data-u="Bruno">Bruno</button>
+      <button class="user" data-u="Rocio">Rocío</button>
+    </div>
+    <form id="passForm" class="hide">
+      <label for="pass" id="passLabel"></label>
+      <input id="pass" type="password" inputmode="numeric" autocomplete="off">
+      <button class="go" type="submit">Entrar</button>
+      <button class="back" type="button" id="back">Elegir otro usuario</button>
+      <p id="err" role="alert"></p>
+    </form>
+  </div>
+</section>
+
+<section id="chat" class="hide">
+  <header>
+    <b><span class="dot" id="meDot"></span><span id="meName"></span></b>
+    <div class="hbtns">
+      <button id="galBtn" type="button">📷 Galería</button>
+      <button id="out" type="button">Salir</button>
+    </div>
+  </header>
+  <div id="who" aria-label="Quién está conectado"></div>
+  <div id="cfg" class="hide">Falta pegar la configuración de Firebase en el código (firebaseConfig).</div>
+  <div id="msgs"><p id="empty">Todavía no hay mensajes. Escribí el primero.</p></div>
+  <div id="typing" aria-live="polite"></div>
+  <div id="stickers" class="hide"></div>
+  <form id="bar">
+    <button type="button" id="photo" aria-label="Enviar foto">📷</button>
+    <button type="button" id="stk" aria-label="Stickers">🎀</button>
+    <input id="txt" type="text" placeholder="Escribí un mensaje" autocomplete="off" maxlength="1000">
+    <button class="send" type="submit">Enviar</button>
+    <input id="file" type="file" accept="image/*" class="hide">
+  </form>
+
+  <div id="gal" class="hide">
+    <header><b>📷 Galería</b><div class="hbtns"><button id="galClose" type="button">Cerrar</button></div></header>
+    <div id="galGrid"></div>
+  </div>
+</section>
+
+</div>
+<div id="rain" aria-hidden="true"></div>
+<div id="lb" class="hide"><img alt="Foto ampliada"></div>
+
+<script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {getFirestore,collection,addDoc,query,orderBy,limitToLast,onSnapshot,serverTimestamp,
+        doc,setDoc,updateDoc,deleteField}
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+/* 1) Configuración de Firebase */
+const firebaseConfig = {
+  apiKey: "AIzaSyAfC_8uR9wd0etHbm6xq3qQQF9JjUCk0ak",
+  authDomain: "chat-sol-bruno-rocio.firebaseapp.com",
+  projectId: "chat-sol-bruno-rocio",
+  appId: "1:797110937394:web:e71b6500d45085240f992b"
+};
+
+/* 2) Usuarios, contraseñas y colores (fill = relleno pastel, edge = borde, dark = color del nombre) */
+const USERS = {
+  Sol:   {label:"Sol",   pass:"22092008", fill:"#fff0a0", edge:"#f0d44f", dark:"#a07c00"},
+  Rocio: {label:"Rocío", pass:"25112010", fill:"#ffcba0", edge:"#f4a56a", dark:"#c25e17"},
+  Bruno: {label:"Bruno", pass:"29112008", fill:"#b4ecc6", edge:"#7ed59b", dark:"#2a8a52"}
+};
+
+/* 3) Stickers. Cuando dibujes los tuyos, guardalos en la carpeta "stickers" con estos nombres
+      (o cambiá "src"). Mientras no existan, se ve un cuadradito placeholder.
+      effect: "shake" = sacude la pantalla de todos | "hearts" = llueven corazones */
+const STICKERS = [
+  {id:"67",       src:"stickers/67.png",       label:"67",       ph:"67", effect:"shake"},
+  {id:"corazones",src:"stickers/corazones.png",label:"corazones",ph:"💗", effect:"hearts"}
+];
+
+const REACTIONS = ["💗","😂","😮","😢","👍","🍦"];
+
+const $ = id => document.getElementById(id);
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+let me = null, picked = null, db = null, started = false;
+let docs = [], selId = null, firstSnap = true;
+const presence = {};
+const missingStk = new Set();
+
+/* ---------- login ---------- */
+document.querySelectorAll(".user").forEach(b => {
+  const u = USERS[b.dataset.u];
+  b.style.background = u.fill; b.style.borderColor = u.edge;
+  b.onclick = () => {
+    picked = b.dataset.u;
+    $("passLabel").textContent = "Contraseña de " + u.label;
+    $("passForm").classList.remove("hide");
+    $("pass").value = ""; $("err").textContent = ""; $("pass").focus();
+  };
+});
+$("back").onclick = () => { picked = null; $("passForm").classList.add("hide"); };
+$("passForm").onsubmit = e => {
+  e.preventDefault();
+  if ($("pass").value === USERS[picked].pass) {
+    localStorage.setItem("chatUser", picked);
+    enter(picked);
+  } else {
+    $("err").textContent = "Contraseña incorrecta";
+  }
+};
+$("out").onclick = () => { beat(false, 0); localStorage.removeItem("chatUser"); location.reload(); };
+
+const saved = localStorage.getItem("chatUser");
+if (saved && USERS[saved]) enter(saved);
+
+/* ---------- chat ---------- */
+function enter(name) {
+  me = name;
+  $("login").classList.add("hide");
+  $("chat").classList.remove("hide");
+  $("meName").textContent = USERS[name].label;
+  const d = $("meDot"); d.style.background = USERS[name].fill; d.style.borderColor = USERS[name].edge;
+  buildStickers();
+  if (started) return;
+  started = true;
+  if (!firebaseConfig.projectId) { $("cfg").classList.remove("hide"); return; }
+  db = getFirestore(initializeApp(firebaseConfig));
+
+  const q = query(collection(db, "messages"), orderBy("ts"), limitToLast(200));
+  onSnapshot(q, snap => {
+    // efectos de stickers: solo para mensajes NUEVOS, en el momento en que llegan
+    if (!firstSnap) {
+      snap.docChanges().forEach(c => {
+        if (c.type !== "added") return;
+        const m = c.doc.data();
+        if (!m.sticker) return;
+        if (m.ts && Date.now() - m.ts.toMillis() > 15000) return; // evita repetir viejos tras reconectar
+        const st = STICKERS.find(s => s.id === m.sticker);
+        if (st) runEffect(st.effect);
+      });
+    }
+    firstSnap = false;
+    docs = snap.docs.map(d => ({id: d.id, ...d.data()}));
+    render();
+    renderGallery();
+  });
+
+  // presencia (conectado / escribiendo)
+  onSnapshot(collection(db, "presence"), s => { s.forEach(d => presence[d.id] = d.data()); paintPresence(); });
+  beat(true, 0);
+  setInterval(() => { if (!document.hidden) beat(true); }, 20000);
+  setInterval(paintPresence, 3000);
+  document.addEventListener("visibilitychange", () => beat(!document.hidden));
+  addEventListener("pagehide", () => beat(false, 0));
+}
+
+function render() {
+  const box = $("msgs");
+  const bottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
+  box.replaceChildren();
+  if (!docs.length) { const p = el("p", null, "Todavía no hay mensajes. Escribí el primero."); p.id = "empty"; box.append(p); return; }
+
+  for (const m of docs) {
+    const u = USERS[m.user]; if (!u) continue;
+    const mine = m.user === me;
+
+    if (m.deleted) {
+      box.append(el("div", "gone", "🍦 " + (mine ? "Borraste un mensaje" : u.label + " borró un mensaje")));
+      continue;
+    }
+
+    const d = el("div", "m" + (mine ? " me" : "") + (selId === m.id ? " sel" : ""));
+    const who = el("div", "who", u.label); who.style.color = u.dark;
+    d.append(who);
+
+    const toggle = () => { selId = selId === m.id ? null : m.id; render(); };
+
+    if (m.sticker) {
+      const st = STICKERS.find(s => s.id === m.sticker); if (!st) continue;
+      const w = stickerEl(st); w.onclick = toggle; d.append(w);
+    } else if (m.image) {
+      const i = el("img", "pic"); i.src = m.image; i.alt = "foto de " + u.label;
+      i.style.borderColor = u.edge; i.onclick = () => openLightbox(m.image);
+      d.append(i);
+    } else {
+      const b = el("div", "bub", m.text);
+      b.style.background = u.fill; b.style.borderColor = u.edge; b.onclick = toggle;
+      d.append(b);
+    }
+
+    // reacciones
+    const counts = {};
+    for (const [usr, em] of Object.entries(m.reactions || {})) (counts[em] ||= []).push(usr);
+    if (Object.keys(counts).length) {
+      const rx = el("div", "rx");
+      for (const [em, who] of Object.entries(counts)) {
+        const b = el("button", who.includes(me) ? "mine" : "", em + (who.length > 1 ? " " + who.length : ""));
+        b.type = "button"; b.title = who.map(w => USERS[w]?.label || w).join(", ");
+        b.onclick = () => react(m, em);
+        rx.append(b);
+      }
+      d.append(rx);
+    }
+
+    // hora + botón de menú
+    const meta = el("div", "meta");
+    if (m.ts) meta.append(el("time", null, m.ts.toDate().toLocaleTimeString("es-AR", {hour: "2-digit", minute: "2-digit"})));
+    const more = el("button", "more", "⋯"); more.type = "button"; more.setAttribute("aria-label", "Reaccionar o borrar"); more.onclick = toggle;
+    meta.append(more);
+    d.append(meta);
+
+    // menú de acciones
+    const acts = el("div", "acts");
+    for (const em of REACTIONS) {
+      const b = el("button", null, em); b.type = "button"; b.onclick = () => react(m, em);
+      acts.append(b);
+    }
+    if (mine) {
+      const del = el("button", "del", "🗑️ Borrar"); del.type = "button"; del.onclick = () => remove(m);
+      acts.append(del);
+    }
+    d.append(acts);
+    box.append(d);
+  }
+  if (bottom || docs.at(-1)?.user === me) box.scrollTop = box.scrollHeight;
+}
+
+function send(data) {
+  if (!db) return;
+  addDoc(collection(db, "messages"), {user: me, ts: serverTimestamp(), ...data});
+}
+$("bar").onsubmit = e => {
+  e.preventDefault();
+  const t = $("txt").value.trim(); if (!t) return;
+  send({text: t}); $("txt").value = "";
+  lastTyp = 0; beat(true, 0);
+};
+
+/* ---------- reacciones y borrar ---------- */
+function react(m, em) {
+  selId = null;
+  const same = m.reactions && m.reactions[me] === em;
+  updateDoc(doc(db, "messages", m.id), {["reactions." + me]: same ? deleteField() : em}).catch(() => alert("No se pudo reaccionar."));
+  render();
+}
+function remove(m) {
+  if (!confirm("¿Borrar este mensaje?")) return;
+  selId = null;
+  updateDoc(doc(db, "messages", m.id), {
+    deleted: true, text: deleteField(), image: deleteField(), sticker: deleteField(), reactions: deleteField()
+  }).catch(() => alert("No se pudo borrar."));
+  render();
+}
+
+/* ---------- stickers ---------- */
+function stickerEl(st) {
+  const w = el("span", "stk");
+  const ph = () => { const p = el("div", "ph"); p.append(el("b", null, st.ph), el("small", null, "placeholder")); p.setAttribute("role", "img"); p.setAttribute("aria-label", "sticker " + st.label); w.replaceChildren(p); };
+  if (missingStk.has(st.id)) { ph(); return w; }
+  const i = new Image(); i.alt = "sticker " + st.label;
+  i.onerror = () => { missingStk.add(st.id); ph(); };
+  i.src = st.src;
+  w.append(i);
+  return w;
+}
+function buildStickers() {
+  const s = $("stickers"); s.replaceChildren();
+  for (const st of STICKERS) {
+    const b = el("button"); b.type = "button"; b.setAttribute("aria-label", "Enviar sticker " + st.label);
+    b.append(stickerEl(st));
+    b.onclick = () => { send({sticker: st.id}); s.classList.add("hide"); };
+    s.append(b);
+  }
+}
+$("stk").onclick = () => $("stickers").classList.toggle("hide");
+
+/* ---------- efectos ---------- */
+function runEffect(kind) {
+  if (kind === "shake") {
+    const a = $("app");
+    a.classList.remove("shake67"); void a.offsetWidth; a.classList.add("shake67");
+    clearTimeout(runEffect.t); runEffect.t = setTimeout(() => a.classList.remove("shake67"), 3100);
+  }
+  if (kind === "hearts") {
+    const rain = $("rain"), hs = ["💗","💖","🩷","💕","💘"];
+    for (let n = 0; n < 45; n++) {
+      const h = el("span", null, hs[n % hs.length]);
+      h.style.left = Math.random() * 100 + "%";
+      h.style.fontSize = 18 + Math.random() * 26 + "px";
+      h.style.animationDuration = 2.6 + Math.random() * 2.4 + "s";
+      h.style.animationDelay = Math.random() * 1.6 + "s";
+      h.style.setProperty("--sway", (Math.random() * 80 - 40) + "px");
+      h.style.setProperty("--r", (Math.random() * 120 - 60) + "deg");
+      rain.append(h);
+      setTimeout(() => h.remove(), 7500);
+    }
+  }
+}
+
+/* ---------- fotos y galería ---------- */
+$("photo").onclick = () => $("file").click();
+$("file").onchange = async e => {
+  const f = e.target.files[0]; e.target.value = "";
+  if (!f) return;
+  try { send({image: await compress(f)}); }
+  catch { alert("No pude procesar esa foto."); }
+};
+async function compress(file) {
+  const url = URL.createObjectURL(file);
+  const img = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = url; });
+  URL.revokeObjectURL(url);
+  for (const [max, q] of [[900, .72], [760, .6], [600, .5]]) {
+    const k = Math.min(1, max / Math.max(img.width, img.height));
+    const c = document.createElement("canvas");
+    c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+    c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+    const out = c.toDataURL("image/jpeg", q);
+    if (out.length < 850000) return out;   // Firestore limita cada documento a ~1 MB
+  }
+  throw new Error("too big");
+}
+function renderGallery() {
+  const g = $("galGrid"); g.replaceChildren();
+  const pics = docs.filter(m => m.image && !m.deleted).reverse();
+  if (!pics.length) { const p = el("p", null, "Todavía no hay fotos."); p.id = "galEmpty"; p.style.gridColumn = "1/-1"; g.append(p); return; }
+  for (const m of pics) {
+    const i = el("img"); i.src = m.image; i.alt = "foto de " + (USERS[m.user]?.label || "");
+    i.style.borderColor = USERS[m.user]?.edge || ""; i.onclick = () => openLightbox(m.image);
+    g.append(i);
+  }
+}
+$("galBtn").onclick = () => $("gal").classList.remove("hide");
+$("galClose").onclick = () => $("gal").classList.add("hide");
+function openLightbox(src) { $("lb").querySelector("img").src = src; $("lb").classList.remove("hide"); }
+$("lb").onclick = () => $("lb").classList.add("hide");
+
+/* ---------- presencia: conectado y "está escribiendo" ---------- */
+let lastTyp = 0;
+function beat(online, typingAt) {
+  if (!db || !me) return;
+  const data = {seen: Date.now(), online};
+  if (typingAt !== undefined) data.typingAt = typingAt;
+  setDoc(doc(db, "presence", me), data, {merge: true}).catch(() => {});
+}
+$("txt").addEventListener("input", () => {
+  if (!$("txt").value) { lastTyp = 0; beat(true, 0); return; }
+  if (Date.now() - lastTyp > 2500) { lastTyp = Date.now(); beat(true, Date.now()); }
+});
+function paintPresence() {
+  const now = Date.now(), w = $("who"); w.replaceChildren();
+  for (const [k, u] of Object.entries(USERS)) {
+    const p = presence[k];
+    const on = k === me || (p && p.online && now - p.seen < 50000);
+    const c = el("span", "chip" + (on ? "" : " off"));
+    const d = el("span", "dot"); d.style.background = u.fill; d.style.borderColor = u.edge;
+    c.append(d, el("span", null, u.label + (on ? "" : " (desconectado/a)")));
+    w.append(c);
+  }
+  const typing = Object.entries(USERS)
+    .filter(([k]) => k !== me && presence[k] && presence[k].online && now - (presence[k].typingAt || 0) < 4500)
+    .map(([, u]) => u.label);
+  const t = $("typing"); t.replaceChildren();
+  if (typing.length) {
+    const dots = el("span", "td"); dots.append(el("i"), el("i"), el("i"));
+    t.append(dots, el("span", null, typing.join(" y ") + (typing.length > 1 ? " están escribiendo…" : " está escribiendo…")));
+  }
+}
+</script>
+</body>
+</html>
