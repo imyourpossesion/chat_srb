@@ -220,7 +220,7 @@ const STICKERS = [
   ...Array.from({length: 10}, (_, n) => ({id: "s" + (n + 1), src: "stickers/sticker" + (n + 1) + ".png", label: "sticker " + (n + 1), ph: "🎀", optional: true}))
 ];
 
-const REACTIONS = ["💗","😂","😮","😢","👍","🍦"];
+const REACTIONS = ["💗","😂","😮","🔥","🫰","🥹"];
 
 const $ = id => document.getElementById(id);
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -430,7 +430,7 @@ function runEffect(kind) {
     clearTimeout(runEffect.t); runEffect.t = setTimeout(() => a.classList.remove("shake67"), 3100);
   }
   if (kind === "hearts") {
-    const rain = $("rain"), hs = ["💗","💖","🩷","💕","💘"];
+    const rain = $("rain"), hs = ["💛","💚","🧡","💝","💟"];
     for (let n = 0; n < 45; n++) {
       const h = el("span", null, hs[n % hs.length]);
       h.style.left = Math.random() * 100 + "%";
