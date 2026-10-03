@@ -240,10 +240,10 @@ const firebaseConfig = {
 
 /* 2) Usuarios, contraseñas y colores (fill = relleno pastel, edge = borde, dark = color del nombre) */
 const USERS = {
-  Sol:   {label:"Sol",   pass:"22092008", fill:"#fff0a0", edge:"#f0d44f", dark:"#a07c00"},
-  Rocio: {label:"Rocío", pass:"enhypen08.olaflulumaxlunamandarina25", fill:"#ffcba0", edge:"#f4a56a", dark:"#c25e17"},
-  Bruno: {label:"Bruno", pass:"65495736o", fill:"#b4ecc6", edge:"#7ed59b", dark:"#2a8a52"},
-  Boludo:{label:"Boludo",pass:"123boludo", fill:"#d9c4f5", edge:"#b394e6", dark:"#6b3fb0"}
+  Sol:   {label:"Sol",   hash:"85232eac48b084ce170d21c847c91a4338a4dc056684ba76daee06f7801ca9de", fill:"#fff0a0", edge:"#f0d44f", dark:"#a07c00"},
+  Rocio: {label:"Rocío", hash:"7c6c60ebde5e9012d70f2442a4c50fc94302e39dc59520f93d33d8460249b4f8", fill:"#ffcba0", edge:"#f4a56a", dark:"#c25e17"},
+  Bruno: {label:"Bruno", hash:"e828ca0229e49282c7142edaea8f5076777d958195d66013e7f852292a5f736e", fill:"#b4ecc6", edge:"#7ed59b", dark:"#2a8a52"},
+  Boludo:{label:"Boludo",hash:"44f0b05e19935f5d863cb1cc262dd152ec8932d987ccdedc6b69b7bfba45e85f", fill:"#d9c4f5", edge:"#b394e6", dark:"#6b3fb0"}
 };
 
 /* 3) Stickers. Cuando dibujes los tuyos, guardalos en la carpeta "stickers" con estos nombres
@@ -282,9 +282,12 @@ document.querySelectorAll(".user").forEach(b => {
   };
 });
 $("back").onclick = () => { picked = null; $("passForm").classList.add("hide"); };
-$("passForm").onsubmit = e => {
+const sha = async s => [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)))].map(b => b.toString(16).padStart(2, "0")).join("");
+$("passForm").onsubmit = async e => {
   e.preventDefault();
-  if ($("pass").value.trim() === USERS[picked].pass) {
+  if (!picked) return;
+  const hh = await sha("chat-sol:" + picked + ":" + $("pass").value.trim());
+  if (hh === USERS[picked].hash) {
     localStorage.setItem("chatUser", picked);
     enter(picked);
   } else {
