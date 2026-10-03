@@ -89,18 +89,42 @@ header b{font-size:1.1rem;display:flex;align-items:center}
 .meta{display:flex;align-items:center;gap:6px;margin:2px 8px}
 .m.me .meta{justify-content:flex-end}
 .meta time{font-size:.7rem;opacity:.6}
+.meta .seen{font-size:.7rem;opacity:.7}
 .meta .more{background:none;font-size:.9rem;opacity:.45;padding:0 4px;line-height:1}
 .acts{display:none;gap:4px;margin:4px 4px 0;padding:5px 8px;background:#fff;border:2px solid var(--line);border-radius:99px;width:max-content;max-width:100%;flex-wrap:wrap}
 .m.me .acts{margin-left:auto}
 .m.sel .acts{display:flex}
 .acts button{background:none;font-size:1.25rem;padding:2px 5px;border-radius:50%}
 .acts .del{font-size:.8rem;padding:2px 8px;border-radius:99px;background:var(--straw)}
+.acts .rep{font-size:.8rem;padding:2px 8px;border-radius:99px;background:var(--vani)}
 .rx{display:flex;gap:4px;flex-wrap:wrap;margin:4px 4px 0}
 .m.me .rx{justify-content:flex-end}
 .rx button{background:#fff;border:2px solid var(--line);border-radius:99px;padding:0 8px;font-size:.85rem}
 .rx button.mine{background:var(--straw);border-color:var(--straw-d)}
 .gone{align-self:center;font-size:.85rem;background:var(--vani);border:2px dashed var(--choco);border-radius:16px;padding:5px 14px;opacity:.8}
 #empty{margin:auto;opacity:.6;text-align:center}
+
+/* respuestas (cita) */
+.quote{display:grid;margin:0 4px 3px;padding:4px 10px;border-left:4px solid;border-radius:10px;background:rgba(255,255,255,.75);font-size:.8rem;cursor:pointer;max-width:100%}
+.quote b{font-size:.75rem}
+.quote span{opacity:.75;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@keyframes flash{0%,100%{filter:none}30%{filter:brightness(.85) saturate(1.6)}}
+.flash .bub,.flash .pic,.flash .stk,.flash .aud{animation:flash 1.2s}
+#replybar{display:flex;align-items:center;gap:8px;padding:6px 12px;border-top:3px dotted var(--line);background:var(--vani);font-size:.85rem}
+#replybar div{flex:1;min-width:0;display:grid;border-left:4px solid var(--straw-d);padding-left:8px}
+#replybar span{opacity:.75;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#replybar button{background:none;font-size:1.1rem;padding:0 6px}
+
+/* audios */
+.aud{display:flex;align-items:center;gap:6px;padding:6px 10px;border:2px solid;border-radius:20px}
+.aud audio{width:200px;max-width:100%;height:36px}
+.aud small{font-size:.7rem;opacity:.6}
+#recbar{display:flex;align-items:center;gap:10px;padding:10px;border-top:3px dotted var(--line)}
+#recbar .rdot{width:12px;height:12px;border-radius:50%;background:#e0245e;animation:blink 1s infinite}
+#recbar b{flex:1}
+#recbar button{height:44px;padding:0 14px;border-radius:22px;background:var(--vani);border:2px solid var(--line)}
+#recbar .send{background:var(--straw);border-color:var(--straw-d);font-weight:600}
+@keyframes blink{50%{opacity:.25}}
 
 #typing{display:flex;align-items:center;gap:8px;padding:2px 18px 6px;font-size:.85rem;min-height:24px}
 .td{display:inline-flex;gap:3px}
@@ -116,7 +140,7 @@ header b{font-size:1.1rem;display:flex;align-items:center}
 #stickers .ph small{display:none}
 #bar{display:flex;gap:6px;padding:10px;border-top:3px dotted var(--line);align-items:center}
 #bar input[type=text]{flex:1;min-width:0;padding:12px 16px;border-radius:22px;border:2px solid var(--choco);background:#fff;font:inherit;color:var(--ink)}
-#bar button{height:44px;padding:0 14px;border-radius:22px;background:var(--vani);border:2px solid var(--line)}
+#bar button{height:44px;padding:0 10px;border-radius:22px;background:var(--vani);border:2px solid var(--line)}
 #bar .send{background:var(--straw);border-color:var(--straw-d);font-weight:600}
 #cfg{background:#fff3cd;padding:10px 16px;font-size:.9rem}
 
@@ -131,7 +155,8 @@ header b{font-size:1.1rem;display:flex;align-items:center}
 
 @media (prefers-reduced-motion:reduce){
   .user{transition:none}
-  .td i{animation:none}
+  .td i,#recbar .rdot{animation:none}
+  .flash .bub,.flash .pic,.flash .stk,.flash .aud{animation:none}
   @keyframes bob67{0%,100%{transform:none}50%{transform:translateY(3px)}}
 }
 </style>
@@ -170,13 +195,23 @@ header b{font-size:1.1rem;display:flex;align-items:center}
   <div id="msgs"><p id="empty">Todavía no hay mensajes. Escribí el primero.</p></div>
   <div id="typing" aria-live="polite"></div>
   <div id="stickers" class="hide"></div>
+  <div id="replybar" class="hide">
+    <div><b id="rbWho"></b><span id="rbTxt"></span></div>
+    <button type="button" id="rbX" aria-label="Cancelar respuesta">✕</button>
+  </div>
   <form id="bar">
     <button type="button" id="photo" aria-label="Enviar foto">📷</button>
     <button type="button" id="stk" aria-label="Stickers">🎀</button>
+    <button type="button" id="mic" aria-label="Grabar audio">🎤</button>
     <input id="txt" type="text" placeholder="Escribí un mensaje" autocomplete="off" maxlength="1000">
     <button class="send" type="submit">Enviar</button>
     <input id="file" type="file" accept="image/*" class="hide">
   </form>
+  <div id="recbar" class="hide">
+    <span class="rdot"></span><b id="recT">0:00</b>
+    <button type="button" id="recCancel" aria-label="Cancelar audio">🗑️</button>
+    <button type="button" class="send" id="recSend">Enviar</button>
+  </div>
 
   <div id="gal" class="hide">
     <header><b>📷 Galería</b><div class="hbtns"><button id="galClose" type="button">Cerrar</button></div></header>
@@ -220,14 +255,18 @@ const STICKERS = [
   ...Array.from({length: 10}, (_, n) => ({id: "s" + (n + 1), src: "stickers/sticker" + (n + 1) + ".png", label: "sticker " + (n + 1), ph: "🎀", optional: true}))
 ];
 
-const REACTIONS = ["💗","😂","😮","🔥","🫰","🥹"];
+const REACTIONS = ["💗","😂","😮","😢","👍","🍦"];
+const MAX_REC = 60;   // segundos máximos por audio
 
 const $ = id => document.getElementById(id);
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const fmt = s => Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+const previewOf = m => m.sticker ? "🎀 Sticker" : m.image ? "📷 Foto" : m.audio ? "🎤 Audio" : (m.text || "").slice(0, 80);
 let me = null, picked = null, db = null, started = false;
-let docs = [], selId = null, firstSnap = true;
+let docs = [], selId = null, firstSnap = true, replyTo = null, dirty = false;
 const presence = {};
 const missingStk = new Set();
+const marking = new Set();
 
 /* ---------- login ---------- */
 document.querySelectorAll(".user").forEach(b => {
@@ -283,7 +322,9 @@ function enter(name) {
     }
     firstSnap = false;
     docs = snap.docs.map(d => ({id: d.id, ...d.data()}));
-    render();
+    markRead();
+    // si hay un audio sonando, no redibujamos para no cortarlo
+    if (isPlaying()) dirty = true; else render();
     renderGallery();
   });
 
@@ -293,11 +334,30 @@ function enter(name) {
   setInterval(() => { if (!document.hidden) beat(true); }, 20000);
   setInterval(paintPresence, 3000);
   document.addEventListener("visibilitychange", () => beat(!document.hidden));
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) markRead(); });
   addEventListener("pagehide", () => beat(false, 0));
 }
 
+/* ---------- visto ---------- */
+function markRead() {
+  if (!db || !me || document.hidden || $("chat").classList.contains("hide")) return;
+  for (const m of docs) {
+    if (m.user === me || m.deleted || (m.readBy && m.readBy[me]) || marking.has(m.id)) continue;
+    marking.add(m.id);
+    updateDoc(doc(db, "messages", m.id), {["readBy." + me]: Date.now()}).catch(() => marking.delete(m.id));
+  }
+}
+
+/* ---------- audios: no cortar la reproducción al actualizar ---------- */
+const isPlaying = () => [...document.querySelectorAll("#msgs audio")].some(a => !a.paused && !a.ended);
+const flush = () => { if (dirty) render(); };
+$("msgs").addEventListener("pause", flush, true);
+$("msgs").addEventListener("ended", flush, true);
+
 function render() {
+  dirty = false;
   const box = $("msgs");
+  const prevTop = box.scrollTop;
   const bottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
   box.replaceChildren();
   if (!docs.length) { const p = el("p", null, "Todavía no hay mensajes. Escribí el primero."); p.id = "empty"; box.append(p); return; }
@@ -312,10 +372,20 @@ function render() {
     }
 
     const d = el("div", "m" + (mine ? " me" : "") + (selId === m.id ? " sel" : ""));
+    d.dataset.id = m.id;
     const who = el("div", "who", u.label); who.style.color = u.dark;
     d.append(who);
 
     const toggle = () => { selId = selId === m.id ? null : m.id; render(); };
+
+    // cita del mensaje al que responde
+    if (m.reply) {
+      const qu = el("div", "quote");
+      qu.style.borderColor = USERS[m.reply.user]?.edge || "";
+      qu.append(el("b", null, USERS[m.reply.user]?.label || ""), el("span", null, m.reply.text || ""));
+      qu.onclick = () => jumpTo(m.reply.id);
+      d.append(qu);
+    }
 
     if (m.sticker) {
       const st = STICKERS.find(s => s.id === m.sticker); if (!st) continue;
@@ -324,6 +394,11 @@ function render() {
       const i = el("img", "pic"); i.src = m.image; i.alt = "foto de " + u.label;
       i.style.borderColor = u.edge; i.onclick = () => openLightbox(m.image);
       d.append(i);
+    } else if (m.audio) {
+      const a = el("div", "aud"); a.style.background = u.fill; a.style.borderColor = u.edge;
+      const au = el("audio"); au.controls = true; au.preload = "metadata"; au.src = m.audio;
+      a.append(au, el("small", null, fmt(m.dur || 0)));
+      d.append(a);
     } else {
       const b = el("div", "bub", m.text);
       b.style.background = u.fill; b.style.borderColor = u.edge; b.onclick = toggle;
@@ -344,15 +419,21 @@ function render() {
       d.append(rx);
     }
 
-    // hora + botón de menú
+    // hora + visto + botón de menú
     const meta = el("div", "meta");
     if (m.ts) meta.append(el("time", null, m.ts.toDate().toLocaleTimeString("es-AR", {hour: "2-digit", minute: "2-digit"})));
-    const more = el("button", "more", "⋯"); more.type = "button"; more.setAttribute("aria-label", "Reaccionar o borrar"); more.onclick = toggle;
+    if (mine) {
+      const seenBy = Object.keys(m.readBy || {}).filter(k => k !== me).map(k => USERS[k]?.label || k);
+      meta.append(el("span", "seen", seenBy.length ? "✓✓ Visto por " + seenBy.join(", ") : "✓"));
+    }
+    const more = el("button", "more", "⋯"); more.type = "button"; more.setAttribute("aria-label", "Responder, reaccionar o borrar"); more.onclick = toggle;
     meta.append(more);
     d.append(meta);
 
     // menú de acciones
     const acts = el("div", "acts");
+    const rep = el("button", "rep", "↩️ Responder"); rep.type = "button"; rep.onclick = () => setReply(m);
+    acts.append(rep);
     for (const em of REACTIONS) {
       const b = el("button", null, em); b.type = "button"; b.onclick = () => react(m, em);
       acts.append(b);
@@ -364,11 +445,15 @@ function render() {
     d.append(acts);
     box.append(d);
   }
-  if (bottom || docs.at(-1)?.user === me) box.scrollTop = box.scrollHeight;
+  const lastId = docs.at(-1)?.id;
+  const newLast = lastId !== render.last; render.last = lastId;
+  if (bottom || (newLast && docs.at(-1)?.user === me)) box.scrollTop = box.scrollHeight;
+  else box.scrollTop = prevTop;
 }
 
 function send(data) {
   if (!db) return;
+  if (replyTo) { data.reply = replyTo; clearReply(); }
   addDoc(collection(db, "messages"), {user: me, ts: serverTimestamp(), ...data});
 }
 $("bar").onsubmit = e => {
@@ -377,6 +462,26 @@ $("bar").onsubmit = e => {
   send({text: t}); $("txt").value = "";
   lastTyp = 0; beat(true, 0);
 };
+
+/* ---------- responder ---------- */
+function setReply(m) {
+  selId = null;
+  replyTo = {id: m.id, user: m.user, text: previewOf(m)};
+  $("rbWho").textContent = "Respondiendo a " + (USERS[m.user]?.label || "");
+  $("rbTxt").textContent = replyTo.text;
+  $("replybar").classList.remove("hide");
+  render();
+  $("txt").focus();
+}
+function clearReply() { replyTo = null; $("replybar").classList.add("hide"); }
+$("rbX").onclick = clearReply;
+function jumpTo(id) {
+  const t = document.querySelector('#msgs [data-id="' + id + '"]');
+  if (!t) return;
+  t.scrollIntoView({behavior: "smooth", block: "center"});
+  t.classList.add("flash");
+  setTimeout(() => t.classList.remove("flash"), 1300);
+}
 
 /* ---------- reacciones y borrar ---------- */
 function react(m, em) {
@@ -389,10 +494,50 @@ function remove(m) {
   if (!confirm("¿Borrar este mensaje?")) return;
   selId = null;
   updateDoc(doc(db, "messages", m.id), {
-    deleted: true, text: deleteField(), image: deleteField(), sticker: deleteField(), reactions: deleteField()
+    deleted: true, text: deleteField(), image: deleteField(), sticker: deleteField(), audio: deleteField(),
+    dur: deleteField(), reply: deleteField(), reactions: deleteField()
   }).catch(() => alert("No se pudo borrar."));
   render();
 }
+
+/* ---------- grabar audios ---------- */
+let rec = null, recChunks = [], recStart = 0, recTimer = null, recStream = null, recCancel = false;
+async function startRec() {
+  if (rec) return;
+  if (!navigator.mediaDevices || !window.MediaRecorder) { alert("Este navegador no permite grabar audios."); return; }
+  try { recStream = await navigator.mediaDevices.getUserMedia({audio: true}); }
+  catch { alert("Necesito permiso para usar el micrófono."); return; }
+  const type = ["audio/webm;codecs=opus", "audio/mp4", "audio/webm"].find(t => MediaRecorder.isTypeSupported(t)) || "";
+  const opts = {audioBitsPerSecond: 24000}; if (type) opts.mimeType = type;
+  rec = new MediaRecorder(recStream, opts);
+  recChunks = []; recCancel = false;
+  rec.ondataavailable = e => { if (e.data.size) recChunks.push(e.data); };
+  rec.onstop = async () => {
+    recStream.getTracks().forEach(t => t.stop());
+    clearInterval(recTimer);
+    const mime = rec.mimeType || type || "audio/webm";
+    const secs = Math.max(1, Math.round((Date.now() - recStart) / 1000));
+    rec = null;
+    $("recbar").classList.add("hide"); $("bar").classList.remove("hide");
+    if (recCancel) return;
+    const blob = new Blob(recChunks, {type: mime});
+    const url = await new Promise(ok => { const r = new FileReader(); r.onload = () => ok(r.result); r.readAsDataURL(blob); });
+    if (url.length > 850000) { alert("El audio quedó demasiado largo."); return; }
+    send({audio: url, dur: secs});
+  };
+  rec.start();
+  recStart = Date.now();
+  $("recT").textContent = "0:00";
+  $("bar").classList.add("hide"); $("recbar").classList.remove("hide");
+  recTimer = setInterval(() => {
+    const s = Math.round((Date.now() - recStart) / 1000);
+    $("recT").textContent = fmt(s);
+    if (s >= MAX_REC) rec.stop();   // se envía solo al llegar al máximo
+  }, 250);
+}
+$("mic").onclick = startRec;
+$("recCancel").onclick = () => { if (rec) { recCancel = true; rec.stop(); } };
+$("recSend").onclick = () => { if (rec) rec.stop(); };
 
 /* ---------- stickers ---------- */
 function stickerEl(st) {
@@ -430,7 +575,7 @@ function runEffect(kind) {
     clearTimeout(runEffect.t); runEffect.t = setTimeout(() => a.classList.remove("shake67"), 3100);
   }
   if (kind === "hearts") {
-    const rain = $("rain"), hs = ["💛","💚","🧡","💝","💟"];
+    const rain = $("rain"), hs = ["💗","💖","🩷","💕","💘"];
     for (let n = 0; n < 45; n++) {
       const h = el("span", null, hs[n % hs.length]);
       h.style.left = Math.random() * 100 + "%";
